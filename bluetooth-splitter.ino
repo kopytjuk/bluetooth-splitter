@@ -4,6 +4,7 @@
 #define I2S_BCLK_PIN  26  // Connected to Pi 5 GPIO 18
 #define I2S_LRCLK_PIN 25  // Connected to Pi 5 GPIO 19
 #define I2S_DATA_PIN  22  // Connected to Pi 5 GPIO 21
+#define LED_PIN       15  // NodeMCU D15
 
 // Define the I2S port (ESP32 has port 0 and port 1)
 #define I2S_PORT_NUM  I2S_NUM_0
@@ -49,6 +50,9 @@ void setup() {
     while (true);
   }
 
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+
   Serial.println("I2S configured successfully. Waiting for audio clock from Raspberry Pi...");
 }
 
@@ -80,6 +84,10 @@ void loop() {
       // Access the first 16-bit sample as an example (combine two bytes):
       int16_t sample = (audio_buffer[1] << 8) | audio_buffer[0];
       Serial.printf("Current raw amplitude value: %d\n", sample);
+      
+      static bool ledState = false;
+      ledState = !ledState;
+      digitalWrite(LED_PIN, ledState ? HIGH : LOW);
       
       packet_counter = 0;
     }
