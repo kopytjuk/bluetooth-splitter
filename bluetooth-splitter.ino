@@ -2,7 +2,7 @@
 #include "BluetoothA2DPSource.h"
 
 // --- Configuration ---
-const char* bluetooth_device_name = "Your Headphones Name"; // Change to your remote BT speaker/headphones name
+const char* bluetooth_device_name = "SoundCore 2"; // Change to your remote BT speaker/headphones name
 
 // Define the ESP32 hardware pins
 #define I2S_BCLK_PIN  26  // Connected to Pi 5 GPIO 18
