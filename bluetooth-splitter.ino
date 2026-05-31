@@ -1,91 +1,91 @@
 #include <driver/i2s.h>
 
-// Definition der Hardware-Pins am ESP32
-#define I2S_BCLK_PIN  26  // Verbunden mit Pi 5 GPIO 18
-#define I2S_LRCLK_PIN 25  // Verbunden mit Pi 5 GPIO 19
-#define I2S_DATA_PIN  22  // Verbunden mit Pi 5 GPIO 21
+// Define the ESP32 hardware pins
+#define I2S_BCLK_PIN  26  // Connected to Pi 5 GPIO 18
+#define I2S_LRCLK_PIN 25  // Connected to Pi 5 GPIO 19
+#define I2S_DATA_PIN  22  // Connected to Pi 5 GPIO 21
 
-// Definition des I2S-Ports (ESP32 hat Port 0 und Port 1)
+// Define the I2S port (ESP32 has port 0 and port 1)
 #define I2S_PORT_NUM  I2S_NUM_0
 
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println("--- ESP32 I2S Audio-Empfänger startet ---");
+  Serial.println("--- ESP32 I2S audio receiver starting ---");
 
-  // 1. I2S-Profil definieren
-  // Das iPad liefert via Bluetooth standardmäßig 44.1 kHz in 16-Bit Stereo.
+  // 1. Define I2S configuration
+  // The iPad delivers 44.1 kHz 16-bit stereo via Bluetooth by default.
   i2s_config_t i2s_config = {
-    .mode = (i2s_mode_t)(I2S_MODE_SLAVE | I2S_MODE_RX), // ESP32 ist Slave und empfängt (RX)
-    .sample_rate = 44100,                               // Samplerate: 44.1 kHz (CD-Qualität)
-    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,       // Auflösung: 16-Bit pro Sample
-    .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,       // Kanal-Format: Stereo (Rechts/Links)
-    .communication_format = I2S_COMM_FORMAT_STAND_I2S,   // Standard I2S Protokoll
-    .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,           // Interrupt-Priorität
-    .dma_buf_count = 8,                                 // Anzahl der DMA-Buffer
-    .dma_buf_len = 64,                                  // Größe der einzelnen Buffer
-    .use_apll = false                                   // Audio-PLL wird als Slave nicht benötigt
+    .mode = (i2s_mode_t)(I2S_MODE_SLAVE | I2S_MODE_RX), // ESP32 is slave and receives (RX)
+    .sample_rate = 44100,                               // Sample rate: 44.1 kHz (CD quality)
+    .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,       // Resolution: 16-bit per sample
+    .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,       // Channel format: stereo (right/left)
+    .communication_format = I2S_COMM_FORMAT_STAND_I2S,   // Standard I2S protocol
+    .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,           // Interrupt priority
+    .dma_buf_count = 8,                                 // Number of DMA buffers
+    .dma_buf_len = 64,                                  // Size of each buffer
+    .use_apll = false                                   // Audio PLL not needed as slave
   };
 
-  // 2. I2S-Pins zuweisen
+  // 2. Assign I2S pins
   i2s_pin_config_t pin_config = {
     .bck_io_num = I2S_BCLK_PIN,
     .ws_io_num = I2S_LRCLK_PIN,
-    .data_out_num = I2S_PIN_NO_CHANGE,                  // Wir senden keine Daten aus
-    .data_in_num = I2S_DATA_PIN                         // Dateneingang vom Pi
+    .data_out_num = I2S_PIN_NO_CHANGE,                  // We do not send data out
+    .data_in_num = I2S_DATA_PIN                         // Data input from Pi
   };
 
-  // 3. Treiber installieren
+  // 3. Install driver
   esp_err_t err = i2s_driver_install(I2S_PORT_NUM, &i2s_config, 0, NULL);
   if (err != ESP_OK) {
-    Serial.printf("Fehler beim Installieren des I2S-Treibers: %d\n", err);
-    while (true); // Stopp bei Fehler
+    Serial.printf("Error installing I2S driver: %d\n", err);
+    while (true); // stop on error
   }
 
-  // 4. Pins aktivieren
+  // 4. Activate pins
   err = i2s_set_pin(I2S_PORT_NUM, &pin_config);
   if (err != ESP_OK) {
-    Serial.printf("Fehler beim Zuweisen der I2S-Pins: %d\n", err);
+    Serial.printf("Error assigning I2S pins: %d\n", err);
     while (true);
   }
 
-  Serial.println("I2S erfolgreich konfiguriert. Warte auf Audio-Takt vom Raspberry Pi...");
+  Serial.println("I2S configured successfully. Waiting for audio clock from Raspberry Pi...");
 }
 
 void loop() {
-  // Buffer für die eintreffenden Audiodaten (256 Bytes)
+  // Buffer for incoming audio data (256 bytes)
   uint8_t audio_buffer[256];
   size_t bytes_read = 0;
 
-  // Live-Daten vom I2S-Bus abrufen
-  // 'portMAX_DELAY' blockiert die Schleife elegant, bis Daten vom Pi reingeschoben werden.
+  // Read live data from the I2S bus
+  // 'portMAX_DELAY' blocks the loop until data is pushed from the Pi.
   esp_err_t result = i2s_read(I2S_PORT_NUM, &audio_buffer, sizeof(audio_buffer), &bytes_read, portMAX_DELAY);
 
   if (result == ESP_OK && bytes_read > 0) {
     
     // =========================================================================
-    // HIER LIEGEN DEINE ROHEN AUDIODATEN!
+    // YOUR RAW AUDIO DATA IS HERE!
     // =========================================================================
-    // 'audio_buffer' enthält jetzt die PCM-Audiodaten deines iPads.
-    // Da es sich um 16-Bit-Daten handelt, entsprechen je 2 Bytes einem Sample.
+    // 'audio_buffer' now contains the PCM audio data from your iPad.
+    // Since this is 16-bit data, every 2 bytes correspond to one sample.
     
-    // Beispiel zur Demonstration: Wir geben alle 500 empfangenen Pakete 
-    // eine Statusmeldung im Seriellen Monitor aus, um den Datenfluss zu beweisen.
+    // Example for demonstration: every 500 received packets we print a status
+    // message to the serial monitor to confirm the data flow.
     static int packet_counter = 0;
     packet_counter++;
     
     if (packet_counter >= 500) {
-      Serial.printf("[INFO] Audio-Stream aktiv. %d Bytes eingelesen.\n", bytes_read);
+      Serial.printf("[INFO] Audio stream active. %d bytes read.\n", bytes_read);
       
-      // Greife beispielhaft das erste 16-Bit Sample (Kombination aus zwei Bytes) ab:
+      // Access the first 16-bit sample as an example (combine two bytes):
       int16_t sample = (audio_buffer[1] << 8) | audio_buffer[0];
-      Serial.printf("Aktueller Amplitude-Rohwert: %d\n", sample);
+      Serial.printf("Current raw amplitude value: %d\n", sample);
       
       packet_counter = 0;
     }
     
-    // TIPP: Wenn du an den ESP32 einen Lautsprecher-DAC (z.B. MAX98357A) über I2S angebunden hast,
-    // würdest du die Daten hier einfach per 'i2s_write' an den zweiten DAC-Port weiterreichen.
+    // TIP: If you have attached a speaker DAC (e.g. MAX98357A) to the ESP32 over I2S,
+    // you would forward the data here with 'i2s_write' to the second DAC port.
 
   }
 }
